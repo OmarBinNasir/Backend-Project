@@ -4,6 +4,24 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import {ApiResponse} from "../utils/ApiResponse.js"
 
+const generateRefreshAndAccessTokens = async(userId)=>{
+    try{
+        
+       const user= await User.findById(userId)
+       const accessToken = user.generateAccessToken()
+       const refreshToken = user.generateRefreshToken()
+
+       user.refreshToken = refreshToken
+       await user.save({ validateBeforeSave:false })
+
+       return {accessToken,refreshToken}
+
+
+    }catch(error){
+        throw ApiError(500,"something went wrong while generating access and refresh token")
+    }
+}
+
 const registerUser = asyncHandler(async (req,res)=>{
     //get user details from frontend
     //validation - not empty
@@ -75,6 +93,86 @@ const registerUser = asyncHandler(async (req,res)=>{
     
 })
 
+const loginUser = asyncHandler(async (req,res)=>{
+    // req body -> data
+    // enter username or email and password
+    // check if username exists
+    // validate the password and username
+    // if exists login access generate refresh and access token
+    // send cookies 
+    const {email, username, password} = req.body
+
+    if(!username||!email){
+        throw new ApiError(400,"username or email is required");
+    }
+
+   const user = await User.findOne({
+        $or:[{username},{email}]
+    })// returns user instance
+    if(!user){
+        throw new ApiError(400,"User doesnt exist");
+    }
+    const isPasswordValid = await user.isPasswordCorrect(password);
+    // User is not used, User is a mongoose object, the methods generateAccessToken, generateRefreshToken are available only in user instance
+     
+    if(!isPasswordValid){
+        throw ApiError(400,"password is incorrect");
+    }
+    
+    const {accessToken,refreshToken}=await generateRefreshAndAccessTokens(user._id)
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")// optional step
+
+    const options ={
+        httpOnly:true, //by these true, only server can modify the cookie, frontend cant modify the cookies now
+        secure:true
+
+    } // cookie options
+     
+    return res
+    .status(200)
+    .cookie("accessToken",accessToken,options)
+    .cookie("refreshToken",refreshToken,options)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                user:loggedInUser, accessToken, refreshToken
+            },
+            "user logged in successfully"
+        )
+    )
+
+})
+
+const logoutUser = asyncHandler( async (req,res)=>{
+  User.findOneAndUpdate(
+    req.user._id,
+    {
+        $set:{
+            refreshToken:undefined
+        } // set gives the fields that needed to be upated
+    },
+    {
+        new:true
+    }
+  )
+  options={
+    httponly:true,
+    secure:true
+  }
+
+  return res
+  .status(200)
+  .clearCookie("accessToken",options)
+  .clearCookie("refreshToken",options)
+  .json(new ApiResponse(200,{},"user logged out"))
+
+})
 
 
-export {registerUser}
+export {
+    registerUser,
+    loginUser,
+    logoutUser
+}
