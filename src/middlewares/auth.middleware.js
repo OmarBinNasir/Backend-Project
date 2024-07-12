@@ -28,7 +28,6 @@ export const verifyJWT = asyncHandler( async (req,res,next)=>{
     throw new ApiError(401,error?.message||"invalid access token")
   }
 
-
-
-
 })
+//added auth middeware to get the info of the user using cookies 
+// it creates a req.user that contains the whole database user
