@@ -308,7 +308,66 @@ const updateAvatar = asyncHandler(async (req,res)=>{
     ).select("-password")
 })
 
+const getUserChannelProfile = asyncHandler( async (req,res)=>{
+    const {username}= req.params
+    if(!username?.trim()){
+        throw new ApiError(400,"username doesnt exist")
+    }
+   const channel = await User.aggregate([
+       {
+        $match:{
+            username:username?.toLowerCase()
+        }
+       },
+       {
+        $lookup:{
+        from:"subscriptions",
+        localField:"_id",
+        foreignField:"channel",
+        as:"subscribers"
+       }
+       },
+       {
+        $lookup:{
+            from:"subscriptions",
+            localField:"_id",
+            foreignField:"subscriber",
+            as:"subscribedTo"
+        }
+       },
+       {
+        $addFields:{
+            subscribersCount : {
+                $size:"$subscribers"
+            },
+            channelsSubscribedToCount :{
+                $size:"subscribedTo"
+            },
+           isSubscribed:{
+            $cond:{
+                if:{ $in :[req.user?._id, "$subscribers.subscribe"]}, // check in subscribers.subcribe is user present or not (in also work for array and object)
+                then:true,
+                else:false 
+            }
+           }
+        }
+       },
+       {
+        $project:{ //used to give selected things
+            fullName:1,
+            username:1,
+            channelsSubscribedToCount:1,
+            subscribersCount:1,
+            isSubscribed:1,
+            avatar:1,
+            coverImage:1
 
+
+        }
+       }
+
+    ])
+})
 
 export {
     registerUser,
@@ -318,5 +377,6 @@ export {
     changeUserPassword,
     getCurrentUser,
     updateAccountDetail,
-    updateAvatar
+    updateAvatar,
+    getUserChannelProfile
 }
