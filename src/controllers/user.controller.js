@@ -306,6 +306,8 @@ const updateAvatar = asyncHandler(async (req,res)=>{
             new : true
         }
     ).select("-password")
+
+    //delete old picture
 })
 
 const getUserChannelProfile = asyncHandler( async (req,res)=>{
