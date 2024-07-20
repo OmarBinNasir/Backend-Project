@@ -8,10 +8,6 @@ const tweetSchema = new Schema({
     owner:{
         type:Schema.Types.ObjectId,
         ref:"User"
-    },
-    video:{
-            type:Schema.Types.ObjectId,
-            ref:"Video"
     }
     
 },

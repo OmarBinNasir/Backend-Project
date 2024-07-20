@@ -5,21 +5,20 @@ const likeSchema = new Schema({
         type:Schema.Types.ObjectId,
         ref:"Comment"
     },
-    desciption:{
-        type:String,
-        required:true
-    },
     likedBy:{
         type:Schema.Types.ObjectId,
-        ref:"User",
-        required:true,
+        ref:"User"
     },
-    videos:[
+    video:
         {
             type:Schema.Types.ObjectId,
             ref:"Video"
-        }
-    ]
+    },
+    tweet:{
+        type:Schema.Types.ObjectId,
+        ref:"Tweet"
+    }
+    
 },
 {timestamps:true})
 
