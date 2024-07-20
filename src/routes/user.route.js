@@ -40,8 +40,8 @@ router.route("/change-password").post(verifyJWT, changeUserPassword)
 router.route("/get-user").post(verifyJWT, getCurrentUser)
 router.route("/update-account").patch(verifyJWT, updateAccountDetail) // use patch, if post used it will update everything
 router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateAvatar)
-router.route("/update-coverImage").patch(verifyJWT, upload.single("avatar"), updateAvatar)
+router.route("/update-coverImage").patch(verifyJWT, upload.single("coverImage"), updateAvatar)
 router.route("/channel/:username").get(verifyJWT, getUserChannelProfile)
 router.route("/watchHistory").get(verifyJWT, getWatchHistory)
 
-export default router
+export default router // if only one thing is exported use default

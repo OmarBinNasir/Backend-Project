@@ -2,9 +2,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from '../utils/ApiError.js';
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-import {ApiResponse} from "../utils/ApiResponse.js"
+import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken";
-import { upload } from "../middlewares/multer.middleware.js";
 
 const generateRefreshAndAccessTokens = async(userId)=>{
     try{
@@ -151,9 +150,13 @@ const logoutUser = asyncHandler( async (req,res)=>{
   User.findOneAndUpdate(
     req.user._id,
     {
-        $set:{
-            refreshToken:undefined
-        } // set gives the fields that needed to be upated
+        $unset:{
+            refreshToken: 1 // this removes the field from document
+        }
+        
+        // $set:{
+        //     refreshToken:null
+        // } // set gives the fields that needed to be upated, not a better method
     },
     {
         new:true
@@ -199,16 +202,16 @@ const refreshAccessToken = asyncHandler( async (req,res)=>{
       secure:true
      }
   
-    const {accessToken, newRefreshToken} = await generateRefreshAndAccessTokens(user._id);
+    const {newAccessToken, newRefreshToken} = await generateRefreshAndAccessTokens(user._id);
   
      return res
      .status(200)
-     .cookies("accessToken",accessToken,options)
-     .cookies("refreshToken",refreshToken,options)
+     .cookies("accessToken",newAccessToken,options)
+     .cookies("refreshToken",newRefreshToken,options)
      .json(
       new ApiResponse(200,
       {
-          accessToken, refreshToken : newRefreshToken
+        newAccessToken, refreshToken : newRefreshToken
       },
       "access token refreshed successfully"
   )
