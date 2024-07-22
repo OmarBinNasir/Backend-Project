@@ -103,21 +103,22 @@ const loginUser = asyncHandler(async (req,res)=>{
     // send cookies 
     const {email, username, password} = req.body
 
-    if(!username||!email){
+    if(!(username||email)){
         throw new ApiError(400,"username or email is required");
     }
-
+    console.log(password)
    const user = await User.findOne({
         $or:[{username},{email}]
     })// returns user instance
     if(!user){
         throw new ApiError(400,"User doesnt exist");
     }
+
     const isPasswordValid = await user.isPasswordCorrect(password);
     // User is not used, User is a mongoose object, the methods generateAccessToken, generateRefreshToken are available only in user instance
      
     if(!isPasswordValid){
-        throw ApiError(400,"password is incorrect");
+        throw new ApiError(400,"password is incorrect");
     }
     
     const {accessToken,refreshToken}=await generateRefreshAndAccessTokens(user._id)
@@ -162,7 +163,7 @@ const logoutUser = asyncHandler( async (req,res)=>{
         new:true
     }
   )
-  options={
+  const options={
     httponly:true,
     secure:true
   }
