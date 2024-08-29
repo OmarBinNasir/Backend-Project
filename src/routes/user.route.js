@@ -4,10 +4,11 @@ import {
     loginUser, 
     logoutUser, 
     refreshAccessToken, 
-    changeUserPassword,
+    changeCurrentPassword,
      getCurrentUser, 
-     updateAccountDetail, 
-     updateAvatar, 
+     updateAccountDetails, 
+     updateUserAvatar,
+     updateUserCoverImage, 
      getUserChannelProfile,
      getWatchHistory  
     } from "../controllers/user.controller.js";
@@ -36,11 +37,11 @@ router.route("/login").post(loginUser)
 router.route("/logout").post(verifyJWT, logoutUser)
 //logout are also handled by get 
 router.route("/refresh-token").post(refreshAccessToken)
-router.route("/change-password").post(verifyJWT, changeUserPassword)
+router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 router.route("/get-user").post(verifyJWT, getCurrentUser)
-router.route("/update-account").patch(verifyJWT, updateAccountDetail) // use patch, if post used it will update everything
-router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateAvatar)
-router.route("/update-coverImage").patch(verifyJWT, upload.single("coverImage"), updateAvatar)
+router.route("/update-account").patch(verifyJWT, updateAccountDetails) // use patch, if post used it will update everything
+router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
+router.route("/update-coverImage").patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage)
 router.route("/channel/:username").get(verifyJWT, getUserChannelProfile)
 router.route("/watchHistory").get(verifyJWT, getWatchHistory)
 
