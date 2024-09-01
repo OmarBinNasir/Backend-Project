@@ -18,27 +18,28 @@ const publishAVideo = asyncHandler(async (req, res) => {
     if( [title, description].some((field)=> field.trim() === "") )
         throw new ApiError(400, "all fields are required")
         
-    const videoFilePath = req.files?.videoFile[0].videoFilePath
+    const videoFilePath = req.files?.videoFile[0].path
     
     let thumbnailPath;
     if(req.files && Array.isArray(req.files.thumbnail) && req.files.thumbnail.length > 0)
          thumbnailPath = req.files.thumbnail[0].path
 
     const videoFile = await uploadOnCloudinary(videoFilePath)
-    const thumbnail = await uploadOnCloudinary(thumbnail)
+    const thumbnail = await uploadOnCloudinary(thumbnailPath)
 
     if(!videoFile)
         throw new ApiError(500,"Uploading video on cloud failed")
     console.log(videoFile)
-    })
+    
     if(!thumbnail)
         throw new ApiError(500,"thumbnail failed uploading")
+
 
     const video = await Video.create({
         title : title,
         videoFile : videoFile.url,
         thumbnail : thumbnail.url,
-        description : description,
+        description : description || "" ,
         isPublished,
         duration : videoFile.duration,
         owner : req.user._id
@@ -55,6 +56,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     .json(
         new ApiResponse(200, publishedVideo, "video published successfully" )
     )
+})
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
@@ -63,60 +65,109 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400,"videoId is not provided")
     }
 
-    const video = Video.aggregate([
+    const video = await Video.aggregate([
         {
             $match:{
-                _id:videoId
+                _id: new mongoose.Types.ObjectId(videoId)
             }
         },
         {
             $lookup:{
                 from:"users",
                 localField:"owner",
-                foriegnField:"_id",
-                as:"owner",
+                foreignField:"_id",
+                as:"channelOwner",
                 pipeline:[
                     {
                         $project:{
+                            _id : 1,
                             username:1,
                             avatar:1,
-                            fullName:1
+                            fullName:1,
                         }
                     },
-                    {
-                        $addField:{
-                            owner:{
-                                $first:"$owner"
-                            }
-                        }    
-                    },
-                    {
-                        $lookup:{
-                            
-                        }
-                    }
+                    
                 ]
             }
         },
+        {
+            $addFields :{
+                channelOwner:{
+                $first : "$channelOwner"
+                }
+            }
+        }
        
     ])
+    
+    if(!video){
+        throw new ApiError(400,"video cannot be fetched aur deleted")
+    }
 
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,channel,"video fetched successfully")
+    )
     //TODO: get video by id
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
+    const {title, description} = req.body
+    
+    const thumbnailPath = req.files?.thumbnail[0].path
+    let thumbnailCloud;
+    if(thumbnailPath)
+     thumbnailCloud = await uploadOnCloudinary(thumbnailPath)
+
+    const thumbnail = thumbnailCloud.url
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set :{
+                title,
+                description,
+                ...( thumbnail && {thumbnail} )
+            }
+        },
+        {new : true}
+    )
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, updatedVideo, "video fields updated")
+    )
 
 })
-
+ //TODO: delete video
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: delete video
+
+    const deletedVideo = await Video.findByIdAndDelete(
+        videoId
+    )
+   return res
+   .status(200)
+   .json(
+    new ApiResponse(200,deletedVideo, "video deleted")
+   )
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+  
+  const video = await Video.findByIdAndUpdate(
+    videoId,
+    {
+        $set :{
+            isPublished : !isPublished
+        }
+    }
+  )
+    
 })
 
 export {
