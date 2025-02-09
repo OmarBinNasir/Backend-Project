@@ -6,11 +6,130 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
+// GET /video?sort=title,asc&
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const { page = 1, limit = 10, query, sortBy = "createdAt", sortType = "desc", userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+    let sortBy1 = {};
+    // { createdAt : asc }
+    if(sort[1]){
+        sortBy1[sort[0]] = sort[1]  // sortBy1["title"] = asc
+    }
+    else{
+        sortBy[sort[0]] = "asc"
+    }
+    const videos = await Video.find({ title : {$regex:query, $options : 'i'}})
+        .sort(sortBy1)
+        .skip( ( page-1 ) * limit )
+        .limit(limit)
+    const videos1 = await Video.aggregate([
+        {
+            $match : {
+                $or : [
+                    {
+                        title : {
+                            $regex : query,
+                            $options : "i"
+                        }
+                    },
+                    {
+                        description : {
+                            $regex : query,
+                            $options : "i"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $match : {
+                title : {
+                    $regex : query,
+                    $options : "i"
+                }
+            }
+        },
+        {
+            $sort : {
+                title : 1 
+            }
+        },
+        {
+            $skip : (page - 1) * limit
+        },
+        {
+            $limit : limit
+        }
+    ])
+    const sortedByDate = await Video.find().sort({createdOn : 1})
+    const sortByDate = await Video.aggregate([
+        {
+            $sort : {createdOn : -1}
+        },
+    ])
+    const result = await Video.updateMany(
+        {}, // Match all documents or apply some filter
+        {
+          $set: {
+            newField: "This is a new field" // adding newField in document
+          }
+        }
+      );
+    const total = await Video.countDocuments({title : {$regex:query, $options : "i"}})
+    const videosMulti = await Video.find({
+        "$or":[
+            {title:{$regex : search, options : "i"}, views : {$gt : 100}},
+            {description : {$regex : search, options : "i"}}
+        ]
+    })    // if used and it will only show documents that matches this both quality muplti field search
+    const countVideosMulti = await Video.find({
+        "$or":[
+            {title:{$regex : search, options : "i"}, views : {$gt : 100}},
+            {description : {$regex : search, options : "i"}}
+        ]
+    }).countDocuments(); 
+    // sort 
+    let sort = req.query.sort || "createdBy"
+    req.query.sort ? ( sort = req.query.sort.split(",") ) : (sort = [sort])
+    
 })
+// GET /videos?page=2&limit=5&query=tutorial&sortBy=title&sortType=asc&userId=605c72aef1d1c234567890ab
+const getAllVideos1 = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10, query = '', sortBy = 'createdAt', sortType = 'desc', userId } = req.query;
+
+    // Define filters
+    const filters = {};
+    if (query) {
+        filters.title = { $regex: query, $options: 'i' }; // Search by title with case-insensitivity
+    }
+    if (userId) {
+        filters.userId = userId; // Filter by user ID
+    }
+
+    // Define sorting
+    const sortOptions = {};
+    sortOptions[sortBy] = sortType === 'asc' ? 1 : -1;
+
+    // Fetch videos with pagination and sorting
+    const videos = await Video.find(filters)
+        .sort(sortOptions)
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit));
+
+    // Total count for pagination
+    const totalVideos = await Video.countDocuments(filters);
+
+    res.status(200).json({
+        success: true,
+        data: videos,
+        pagination: {
+            total: totalVideos,
+            page: parseInt(page),
+            limit: parseInt(limit),
+        },
+    });
+});
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description, isPublished } = req.body
@@ -68,7 +187,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     const video = await Video.aggregate([
         {
             $match:{
-                _id: new mongoose.Types.ObjectId(videoId)
+                _id: mongoose.Types.ObjectId(videoId)
             }
         },
         {
