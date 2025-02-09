@@ -107,7 +107,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     return res
     .status(200)
     .json(
-        new ApiResponse(200,channel,"video fetched successfully")
+        new ApiResponse(200,video,"video fetched successfully")
     )
     //TODO: get video by id
 })
@@ -144,15 +144,21 @@ const updateVideo = asyncHandler(async (req, res) => {
 })
  //TODO: delete video
 const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
+  const { videoId } = req.params
+    
+  const video = await Video.findById(videoId)
 
-    const deletedVideo = await Video.findByIdAndDelete(
-        videoId
-    )
-   return res
+  if(!video)
+    return res.json(new ApiResponse(200,"video doesnt exist or deleted")) 
+
+  let deletedVideo;
+    if(JSON.stringify(video.owner) === JSON.stringify(req.user._id))
+      deletedVideo = await Video.findOneAndDelete(videoId)  
+    
+    return res
    .status(200)
    .json(
-    new ApiResponse(200,deletedVideo, "video deleted")
+    new ApiResponse(200, deletedVideo, "video deleted")
    )
 })
 
@@ -166,6 +172,11 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
             isPublished : !isPublished
         }
     }
+  )
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200, video, "video is now !published")
   )
     
 })
